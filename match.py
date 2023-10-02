@@ -23,9 +23,9 @@ class ImageMatcher:
     # Finds the median bin of a histogram
     def hist_median(self, hist):
         total_samples = hist.sum()
-        half_samples = total_samples / 2
+        half_samples = total_samples // 2
         s = 0
-        for i in xrange(len(hist)):
+        for i in range(len(hist)):  # changed xrange to range
             s += hist[i]
             if s > half_samples:
                 return i
@@ -93,18 +93,17 @@ class ImageMatcher:
         dct_diff = img1 - img2
         dct_correl = cv2.compareHist(img1.flatten(), img2.flatten(), cv2.HISTCMP_CORREL) * 100
 
-        print "NUMBER OF GOOD MATCHES: {0}".format(len(matches))
-        print "HISTORGRAM CORRELATION: {0}".format(hist_correlation)
-        print "MWN CORRELATION: {0}".format(hist_mwn)
-        print "DCT CORRELATION: {0}".format(dct_correl)
-
+        print(f"NUMBER OF GOOD MATCHES: {len(matches)}")
+        print(f"HISTOGRAM CORRELATION: {hist_correlation}")
+        print(f"MWN CORRELATION: {hist_mwn}")
+        print(f"DCT CORRELATION: {dct_correl}")
 
         # Calculate match threshold based on the number of keypoints detected in the database image and the query image
         train_threshold = 0.1 * len(train_kp)
         query_threshold = 0.1 * len(query_kp)
         threshold = max(train_threshold, query_threshold)
 
-        print "THRESHOLD: {0}".format(threshold)
+        print(f"THRESHOLD: {threshold}")
 
         # Reject match if number of detected matches is less than the threshold
         if len(matches) < threshold:
@@ -142,7 +141,7 @@ class ImageMatcher:
         else:
             return None, None
 
-        print "SCORE IS {0}".format(score)
+        print(f"SCORE IS: {score}")
         return score, (shift_x, shift_y)
 
     def match(self, query_img):
@@ -166,7 +165,7 @@ class ImageMatcher:
         best_score = 0
         best_shift = None
         for key in self.table.get_keys():
-            print "NOW COMPARING WITH: %s" % key
+            print(f"NOW COMPARING WITH: {key}")
             train_data = self.table.get_all_data(key)
             train_kp, train_des, train_hist, train_img, annotation_text, annotation_img = train_data
             score, shift = self.compute_match_score((query_kp, query_des, query_hist, query_img), (train_kp, train_des, train_hist, train_img))
@@ -177,7 +176,7 @@ class ImageMatcher:
 
         response = {'status' : 'success'}
 
-        print "BEST FIT IS: {0}".format(best_fit)
+        print(f"BEST FIT IS: {best_fit}")
 
         # Send response to server
         if best_fit == None:
