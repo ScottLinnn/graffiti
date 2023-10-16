@@ -1,0 +1,45 @@
+[submodule "dnn_models/hardnet"]
+	path = dnn_models/hardnet
+	url = https://github.com/DagnyT/hardnet.git
+[submodule "dnn_models/log_polar_descriptors"]
+	path = dnn_models/log_polar_descriptors
+	url = https://github.com/cvlab-epfl/log-polar-descriptors.git
+[submodule "dnn_models/geodesc"]
+	path = dnn_models/geodesc
+	url = https://github.com/lzx551402/geodesc.git
+[submodule "dnn_models/SOSNet"]
+	path = dnn_models/SOSNet
+	url = https://github.com/yuruntian/SOSNet.git
+[submodule "dnn_models/superpoint_ml_repo"]
+	path = dnn_models/superpoint_ml_repo
+	url = https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork
+[submodule "dnn_models/d2net"]
+	path = dnn_models/d2net
+	url = https://github.com/mihaidusmanu/d2-net.git
+[submodule "dnn_models/HardNet2"]
+	path = dnn_models/HardNet2
+	url = https://github.com/pultarmi/HardNet_MultiDataset
+[submodule "dnn_models/r2d2"]
+	path = dnn_models/r2d2
+	url = https://github.com/naver/r2d2.git
+[submodule "dnn_models/contextdesc"]
+	path = dnn_models/contextdesc
+	url = https://github.com/jyh2005xx/contextdesc.git
+[submodule "dnn_models/l2net"]
+	path = dnn_models/l2net
+	url = https://github.com/yuruntian/L2-Net.git
+[submodule "dnn_models/tensorflow_models"]
+	path = dnn_models/tensorflow_models
+	url = https://github.com/tensorflow/models
+[submodule "dnn_models/lfnet"]
+	path = dnn_models/lfnet
+	url = git@github.com:vcg-uvic/lf-net-release.git
+[submodule "dnn_models/KP2D"]
+	path = dnn_models/KP2D
+	url = https://github.com/TRI-ML/KP2D.git
+[submodule "dnn_models/pytorch-superpoint"]
+	path = dnn_models/pytorch-superpoint
+	url = https://github.com/ducha-aiki/pytorch-superpoint.git
+[submodule "dnn_models/lanet"]
+	path = dnn_models/lanet
+	url = https://github.com/wangch-g/lanet.git
