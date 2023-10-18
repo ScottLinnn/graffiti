@@ -1,0 +1,10 @@
+/home/scott/aperture_test_images/different_things/bedroom.jpg
+/home/scott/aperture_test_images/different_things/just_a_wall.jpg
+/home/scott/aperture_test_images/different_things/milk.jpg
+/home/scott/aperture_test_images/different_things/bread_in_firdge.jpg
+/home/scott/aperture_test_images/different_things/milan_cathedral.jpg
+/home/scott/aperture_test_images/different_things/wirl-home-office-before.jpg
+/home/scott/aperture_test_images/different_things/piazza.jpg
+/home/scott/aperture_test_images/different_things/cup.jpg
+/home/scott/aperture_test_images/different_things/mount_rushmore.jpg
+/home/scott/aperture_test_images/different_things/florence.jpg

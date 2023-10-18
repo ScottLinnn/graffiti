@@ -8,78 +8,42 @@ import torch
 
 from tqdm import tqdm
 
+import os
+import sys
 import scipy
 import scipy.io
 import scipy.misc
 
-from .dnn_models.d2net.lib.model_test import D2Net
-from .dnn_models.d2net.lib.utils import preprocess_image
-from .dnn_models.d2net.lib.pyramid import process_multiscale
+from PIL import Image
+
+sys.path.append(os.path.join("dnn_models", "d2net"))
+from lib.model_test import D2Net
+from lib.utils import preprocess_image
+from lib.pyramid import process_multiscale
+
+
+def resize_image(image, target_size):
+    # Convert the NumPy array to a PIL Image object
+    pil_image = Image.fromarray((image * 255).astype(np.uint8))
+    # Resize the image
+    resized_pil_image = pil_image.resize(target_size, Image.ANTIALIAS)
+    # Convert the PIL Image object back to a NumPy array
+    resized_image = np.array(resized_pil_image).astype("float") / 255
+    return resized_image
 
 
 def extract_features(
     image_list_file,
     model_file="models/d2_tf.pth",
     preprocessing="caffe",
-    max_edge=1600,
-    max_sum_edges=2800,
+    max_edge=800,
+    max_sum_edges=1400,
     multiscale=False,
     use_relu=True,
 ):
     # CUDA
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-
-    # # Argument parsing
-    # parser = argparse.ArgumentParser(description='Feature extraction script')
-
-    # parser.add_argument(
-    #     '--image_list_file', type=str, required=True,
-    #     help='path to a file containing a list of images to process'
-    # )
-
-    # parser.add_argument(
-    #     '--preprocessing', type=str, default='caffe',
-    #     help='image preprocessing (caffe or torch)'
-    # )
-    # parser.add_argument(
-    #     '--model_file', type=str, default='models/d2_tf.pth',
-    #     help='path to the full model'
-    # )
-
-    # parser.add_argument(
-    #     '--max_edge', type=int, default=1600,
-    #     help='maximum image size at network input'
-    # )
-    # parser.add_argument(
-    #     '--max_sum_edges', type=int, default=2800,
-    #     help='maximum sum of image sizes at network input'
-    # )
-
-    # parser.add_argument(
-    #     '--output_extension', type=str, default='.d2-net',
-    #     help='extension for the output'
-    # )
-    # parser.add_argument(
-    #     '--output_type', type=str, default='npz',
-    #     help='output file type (npz or mat)'
-    # )
-
-    # parser.add_argument(
-    #     '--multiscale', dest='multiscale', action='store_true',
-    #     help='extract multiscale features'
-    # )
-    # parser.set_defaults(multiscale=False)
-
-    # parser.add_argument(
-    #     '--no-relu', dest='use_relu', action='store_false',
-    #     help='remove ReLU after the dense feature extraction module'
-    # )
-    # parser.set_defaults(use_relu=True)
-
-    # args = parser.parse_args()
-
-    # print(args)
 
     # Creating CNN model
     model = D2Net(model_file=model_file, use_relu=use_relu, use_cuda=use_cuda)
@@ -98,15 +62,35 @@ def extract_features(
             image = np.repeat(image, 3, -1)
 
         # TODO: switch to PIL.Image due to deprecation of scipy.misc.imresize.
+
+        # Get the resizing factor for max_edge constraint
         resized_image = image
         if max(resized_image.shape) > max_edge:
-            resized_image = scipy.misc.imresize(
-                resized_image, max_edge / max(resized_image.shape)
-            ).astype("float")
+            factor_max_edge = max_edge / max(resized_image.shape)
+            new_size_max_edge = (
+                int(resized_image.shape[1] * factor_max_edge),
+                int(resized_image.shape[0] * factor_max_edge),
+            )
+            resized_image = resize_image(resized_image, new_size_max_edge)
+
+        # Get the resizing factor for max_sum_edges constraint
         if sum(resized_image.shape[:2]) > max_sum_edges:
-            resized_image = scipy.misc.imresize(
-                resized_image, max_sum_edges / sum(resized_image.shape[:2])
-            ).astype("float")
+            factor_max_sum_edges = max_sum_edges / sum(resized_image.shape[:2])
+            new_size_max_sum_edges = (
+                int(resized_image.shape[1] * factor_max_sum_edges),
+                int(resized_image.shape[0] * factor_max_sum_edges),
+            )
+            resized_image = resize_image(resized_image, new_size_max_sum_edges)
+
+        # resized_image = image
+        # if max(resized_image.shape) > max_edge:
+        #     resized_image = scipy.misc.imresize(
+        #         resized_image, max_edge / max(resized_image.shape)
+        #     ).astype("float")
+        # if sum(resized_image.shape[:2]) > max_sum_edges:
+        #     resized_image = scipy.misc.imresize(
+        #         resized_image, max_sum_edges / sum(resized_image.shape[:2])
+        #     ).astype("float")
 
         fact_i = image.shape[0] / resized_image.shape[0]
         fact_j = image.shape[1] / resized_image.shape[1]
