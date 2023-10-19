@@ -171,17 +171,17 @@ class benchmarker:
             cv2.compareHist(img1.flatten(), img2.flatten(), cv2.HISTCMP_CORREL) * 100
         )
 
-        # logging.DEBUG(f"NUMBER OF GOOD MATCHES: {len(matches)}")
-        # logging.DEBUG(f"HISTOGRAM CORRELATION: {hist_correlation}")
-        # logging.DEBUG(f"MWN CORRELATION: {hist_mwn}")
-        # logging.DEBUG(f"DCT CORRELATION: {dct_correl}")
+        logging.debug(f"NUMBER OF GOOD MATCHES: {len(matches)}")
+        logging.debug(f"HISTOGRAM CORRELATION: {hist_correlation}")
+        logging.debug(f"MWN CORRELATION: {hist_mwn}")
+        logging.debug(f"DCT CORRELATION: {dct_correl}")
 
         # Calculate match threshold based on the number of keypoints detected in the database image and the query image
         train_threshold = 0.1 * len(train_kp)
         query_threshold = 0.1 * len(query_kp)
         threshold = max(train_threshold, query_threshold)
 
-        # logging.DEBUG(f"THRESHOLD: {threshold}")
+        logging.debug(f"THRESHOLD: {threshold}")
 
         # Reject match if number of detected matches is less than the threshold
         if len(matches) < threshold:
