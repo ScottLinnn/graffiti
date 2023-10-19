@@ -8,6 +8,7 @@ from extract_d2net import (
     extract_features,
 )  # Assuming the above code is saved in feature_extractor.py
 from enum import Enum
+import os
 
 ###############################################################################
 
@@ -25,14 +26,38 @@ class FeatureMatchingAlgorithm:
 
 ###############################################################################
 
+def get_image_list_from_file(image_list_file):
+    image_path_list = []
+    with open(image_list_file, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            if os.path.isdir(line):
+                # If the line is a directory, collect all image files within it
+                directory_path = line
+                image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
+                is_image_file = \
+                    lambda filename : filename.lower().endswith(image_extensions)
+                image_files = [
+                    os.path.join(directory_path, filename)
+                    for filename in os.listdir(directory_path)
+                    if is_image_file(filename)
+                ]
+                image_path_list.extend(image_files)
+            else:
+                # Otherwise, assume it's a direct image file path
+                image_path_list.append(line)
+    return image_path_list
+
+###############################################################################
+
 class SURF(FeatureMatchingAlgorithm):
     def get_features(self, image_list_file: str):
         file_to_kp_desc_map = {}
         surf = cv2.xfeatures2d.SURF_create()
 
-        image_path_list = []
-        with open(image_list_file, 'r') as file:
-            image_path_list = [line.strip() for line in file.readlines()]
+        image_path_list = get_image_list_from_file(image_list_file)
 
         for image_file in image_path_list:
             img = cv2.imread(image_file, 0)
@@ -56,7 +81,15 @@ class D2Net(FeatureMatchingAlgorithm):
         self.model_file = model_file
 
     def get_features(self, image_list_file: str):
-        return extract_features(image_list_file, self.model_file)
+        image_path_list = get_image_list_from_file(image_list_file)
+        temp_file_name = "temp_file_list"
+        with open(temp_file_name, 'w') as file:
+            for image_path in image_path_list:
+                file.write(image_path + '\n')
+
+        features = extract_features(temp_file_name, self.model_file)
+        os.remove(temp_file_name)
+        return features
 
     @staticmethod
     def get_keypoint_coordinates(keypoint):
@@ -264,6 +297,8 @@ class benchmarker:
             for target_image_path, target_data in feature_data.items():
                 if query_image_path == target_image_path:
                     continue  # Skip matching with itself
+                logging.info(
+                    f"Now comparing {query_image_path} with {target_image_path}")
 
                 target_img = cv2.imread(target_image_path, 0)
                 target_img = cv2.resize(target_img, (config.IM_HEIGHT, config.IM_WIDTH))
@@ -290,7 +325,7 @@ class benchmarker:
                     best_shift = shift
                     best_fit = (query_image_path, target_image_path)
 
-        logging.info(f"BEST FIT IS: {best_fit}")
+            logging.info(f"BEST FIT IS: {best_fit}")
 
         if self.benchmark_type == BenchmarkType.FALSE_POS:
             logging.info(f"False positive is: {positive_num/total_num/100}%")

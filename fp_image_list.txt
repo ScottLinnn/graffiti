@@ -1,10 +1,20 @@
-test_images/different_things/bedroom.jpg
-test_images/different_things/just_a_wall.jpg
-test_images/different_things/milk.jpg
-test_images/different_things/bread_in_firdge.jpg
-test_images/different_things/milan_cathedral.jpg
-test_images/different_things/wirl-home-office-before.jpg
-test_images/different_things/piazza.jpg
-test_images/different_things/cup.jpg
-test_images/different_things/mount_rushmore.jpg
-test_images/different_things/florence.jpg
+# test_images/different_things/bedroom.jpg
+# test_images/different_things/just_a_wall.jpg
+# test_images/different_things/milk.jpg
+# test_images/different_things/bread_in_firdge.jpg
+# test_images/different_things/milan_cathedral.jpg
+# test_images/different_things/wirl-home-office-before.jpg
+# test_images/different_things/piazza.jpg
+# test_images/different_things/cup.jpg
+# test_images/different_things/mount_rushmore.jpg
+# test_images/different_things/florence.jpg
+# test_images/vip-lowlight/Img_001.png
+# test_images/vip-lowlight/Img_002.png
+# test_images/vip-lowlight/Img_003.png
+# test_images/vip-lowlight/Img_004.png
+# test_images/vip-lowlight/Img_005.png
+# test_images/vip-lowlight/Img_006.png
+# test_images/vip-lowlight/Img_007.png
+# test_images/vip-lowlight/Img_008.png
+test_images/similar_pillar_corners
+test_images/similar_wood_texture
