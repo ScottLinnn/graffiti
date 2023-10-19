@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import numpy as np
 import config
@@ -6,6 +7,9 @@ import logging
 from extract_d2net import (
     extract_features,
 )  # Assuming the above code is saved in feature_extractor.py
+from enum import Enum
+
+###############################################################################
 
 class FeatureMatchingAlgorithm:
     def get_features(self, image_list_file: str):
@@ -14,6 +18,12 @@ class FeatureMatchingAlgorithm:
     @staticmethod
     def get_keypoint_coordinates(keypoint):
         pass
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        pass
+
+###############################################################################
 
 class SURF(FeatureMatchingAlgorithm):
     def get_features(self, image_list_file: str):
@@ -24,8 +34,9 @@ class SURF(FeatureMatchingAlgorithm):
         with open(image_list_file, 'r') as file:
             image_path_list = [line.strip() for line in file.readlines()]
 
-        for image_file in image_list_file:
-            img = cv2.imread(query_image_path, 0)
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_HEIGHT, config.IM_WIDTH))
             file_to_kp_desc_map[image_file] = surf.detectAndCompute(img, None)
 
         return file_to_kp_desc_map
@@ -33,6 +44,12 @@ class SURF(FeatureMatchingAlgorithm):
     @staticmethod
     def get_keypoint_coordinates(keypoint):
         return keypoint.pt
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return feature_data
+
+###############################################################################
 
 class D2Net(FeatureMatchingAlgorithm):
     def __init__(self, model_file):
@@ -45,13 +62,25 @@ class D2Net(FeatureMatchingAlgorithm):
     def get_keypoint_coordinates(keypoint):
         return keypoint
 
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return (feature_data["descriptors"], feature_data["keypoints"])
+
+###############################################################################
+
+class BenchmarkType(Enum):
+    FALSE_POS = 1
+    FALSE_NEG = 2
+
+###############################################################################
 
 # Compute false positives for images of different things
-class fp_benchmarker:
-    def __init__(self, image_list_file, matching_alg):
+class benchmarker:
+    def __init__(self, benchmark_type, image_list_file, matching_alg):
         self.flann = cv2.FlannBasedMatcher(config.INDEX_PARAMS, config.SEARCH_PARAMS)
         self.image_list_file = image_list_file
         self.matching_alg = matching_alg
+        self.benchmark_type = benchmark_type
 
     # Finds the median bin of a histogram
     def hist_median(self, hist):
@@ -63,12 +92,16 @@ class fp_benchmarker:
             if s > half_samples:
                 return i
 
+###############################################################################
+
     def extract_good_matches(self, matches):
         good = []
         for i, (m, n) in enumerate(matches):
             if m.distance < (config.DISTANCE_THRESH * n.distance):
                 good.append(m)
         return good
+
+###############################################################################
 
     # Returns a match score between two images
     def compute_match_score(self, query_data, train_data):
@@ -192,6 +225,9 @@ class fp_benchmarker:
         logging.info(f"SCORE IS: {score}")
         return score, (shift_x, shift_y)
 
+###############################################################################
+
+    @staticmethod
     def calculate_histogram(image):
         """
         Calculate a histogram of a single-channel (greyscale) image using 256
@@ -200,11 +236,14 @@ class fp_benchmarker:
         """
         return cv2.calcHist([image], [0], None, [256], [0, 256])
 
+###############################################################################
+
     def perform_matching(self):
         # Extract features
         logging.info("Beginning feature extraction")
         feature_data = self.matching_alg.get_features(self.image_list_file)
         logging.info("Feature extraction is complete")
+        logging.info(f"Feature data is of type {type(feature_data)}")
         total_num = len(list(feature_data.keys()))
         positive_num = 0
         negative_num = 0
@@ -216,10 +255,11 @@ class fp_benchmarker:
         for query_image_path, query_data in feature_data.items():
             # Load the image in grayscale.
             query_img = cv2.imread(query_image_path, 0)
-            query_img = cv2.resize(query_img, (config.IM_HEIGHT, config.IM_WIDTH))
-            query_hist = calculate_histogram(query_img)
-            query_des = query_data["descriptors"]
-            query_kp = query_data["keypoints"]
+            query_img = cv2.resize(query_img,
+                                   (config.IM_HEIGHT, config.IM_WIDTH))
+            query_hist = self.calculate_histogram(query_img)
+            (query_kp, query_des) = \
+                self.matching_alg.get_kp_desc_pair(query_data)
 
             for target_image_path, target_data in feature_data.items():
                 if query_image_path == target_image_path:
@@ -227,9 +267,9 @@ class fp_benchmarker:
 
                 target_img = cv2.imread(target_image_path, 0)
                 target_img = cv2.resize(target_img, (config.IM_HEIGHT, config.IM_WIDTH))
-                target_hist = calculate_histogram(target_img)
-                target_des = target_data["descriptors"]
-                target_kp = target_data["keypoints"]
+                target_hist = self.calculate_histogram(target_img)
+                (target_kp, target_des) = \
+                    self.matching_alg.get_kp_desc_pair(target_data)
 
                 # Convert descriptors to type float32, which is required by FLANN
                 query_des = query_des.astype(np.float32)
@@ -251,17 +291,47 @@ class fp_benchmarker:
                     best_fit = (query_image_path, target_image_path)
 
         logging.info(f"BEST FIT IS: {best_fit}")
-        logging.info(f"False positive is: {(float)(positive_num/total_num/100)}%")
 
+        if self.benchmark_type == BenchmarkType.FALSE_POS:
+            logging.info(f"False positive is: {positive_num/total_num/100}%")
+        elif self.benchmark_type == BenchmarkType.FALSE_NEG:
+            logging.info(f"False negative is: {(negative_num/total_num/100)}%")
+
+###############################################################################
+
+def main():
+    logging.basicConfig(level=logging.INFO)
+
+    parser = \
+        argparse.ArgumentParser(
+            description="Benchmarking tool for feature matching algorithms")
+    parser.add_argument(
+        "--type", choices=["false_pos", "false_neg"], required=True,
+        help="Specify the type of benchmark to run")
+
+    matching_algos = ["surf", "d2net"]
+    parser.add_argument(
+        "--matching_algo", choices=matching_algos, required=True,
+        help="Specify the matching algorithm to use for the benchmark")
+    args = parser.parse_args()
+
+    if args.type == "false_pos":
+        benchmark_type = BenchmarkType.FALSE_POS
+        image_list_file = "fp_image_list.txt"
+        logging.info("Performing false positive benchamark")
+    elif args.type == "false_neg":
+        benchmark_type = BenchmarkType.FALSE_NEG
+        image_list_file = "fn_image_list.txt"
+        logging.info("Performing false negative benchamark")
+
+    if args.matching_algo == "surf":
+        matching_algo = SURF()
+    elif args.matching_algo == "d2net":
+        model_file = "models/d2_tf.pth"
+        matching_algo = D2Net(model_file)
+
+    b = benchmarker(benchmark_type, image_list_file, matching_algo)
+    b.perform_matching()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    image_list_file = "fp_image_list.txt"
-    model_file = "models/d2_tf.pth"
-    logging.info("Performing false positive benchamark")
-
-    # d2net_alg = D2Net(model_file)
-    surf_alg = SURF()
-
-    benchmarker = fp_benchmarker(image_list_file, surf_alg)
-    benchmarker.perform_matching()
+    main()

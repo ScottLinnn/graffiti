@@ -14,7 +14,7 @@ FROM python:${PYTHON_VERSION}-slim as base
 
 FROM python:${PYTHON_VERSION}-slim as git
 RUN \
-  --mount=type=cache,target=/var/cache/apt \
+  # --mount=type=cache,target=/var/cache/apt \
   apt-get update && apt-get install -y git
 
 FROM git as clone
@@ -25,7 +25,7 @@ FROM base as build
 COPY --from=clone /opencv /opencv
 COPY --from=clone /opencv_contrib /opencv_contrib
 RUN \
-  --mount=type=cache,target=/var/cache/apt \
+  # --mount=type=cache,target=/var/cache/apt \
   apt-get update && apt-get install -y cmake ccache g++
 RUN python3 -m pip install numpy==1.26.0
 
@@ -103,4 +103,4 @@ EXPOSE 8000
 EXPOSE 9099
 
 # Run the application.
-CMD python fp_benchmark.py
+CMD python benchmark.py --type=false_pos --matching_algo=d2net
