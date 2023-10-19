@@ -7,13 +7,51 @@ from extract_d2net import (
     extract_features,
 )  # Assuming the above code is saved in feature_extractor.py
 
+class FeatureMatchingAlgorithm:
+    def get_features(self, image_list_file: str):
+        pass
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        pass
+
+class SURF(FeatureMatchingAlgorithm):
+    def get_features(self, image_list_file: str):
+        file_to_kp_desc_map = {}
+        surf = cv2.xfeatures2d.SURF_create()
+
+        image_path_list = []
+        with open(image_list_file, 'r') as file:
+            image_path_list = [line.strip() for line in file.readlines()]
+
+        for image_file in image_list_file:
+            img = cv2.imread(query_image_path, 0)
+            file_to_kp_desc_map[image_file] = surf.detectAndCompute(img, None)
+
+        return file_to_kp_desc_map
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint.pt
+
+class D2Net(FeatureMatchingAlgorithm):
+    def __init__(self, model_file):
+        self.model_file = model_file
+
+    def get_features(self, image_list_file: str):
+        return extract_features(image_list_file, self.model_file)
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint
+
 
 # Compute false positives for images of different things
-class fn_benchmarker:
-    def __init__(self, image_list_file, model_file):
+class fp_benchmarker:
+    def __init__(self, image_list_file, matching_alg):
         self.flann = cv2.FlannBasedMatcher(config.INDEX_PARAMS, config.SEARCH_PARAMS)
         self.image_list_file = image_list_file
-        self.model_file = model_file
+        self.matching_alg = matching_alg
 
     # Finds the median bin of a histogram
     def hist_median(self, hist):
@@ -39,9 +77,9 @@ class fn_benchmarker:
 
         score = 0
 
-        matches = self.extract_good_matches(
-            self.flann.knnMatch(query_des, train_des, k=2)
-        )
+        matches = \
+            self.extract_good_matches(
+                self.flann.knnMatch(query_des, train_des, k=2))
 
         # Filter out high intensity pixel values
         train_hist[245:] = train_hist[244]
@@ -72,9 +110,8 @@ class fn_benchmarker:
             query_hist = hist_new
 
         # Find histogram correlation
-        hist_correlation = (
+        hist_correlation = \
             cv2.compareHist(train_hist, query_hist, cv2.HISTCMP_CORREL) * 100
-        )
 
         # Find Mann-Whitney U Test score
         hist_mwn = (
@@ -125,8 +162,11 @@ class fn_benchmarker:
         for m in matches:
             k_q = query_kp[m.queryIdx]
             k_t = train_kp[m.trainIdx]
-            shift_xs.append(k_q[0] - k_t[0])
-            shift_ys.append(k_q[1] - k_t[1])
+
+            k_q_coord = self.matching_alg.get_keypoint_coordinates(k_q);
+            k_t_coord = self.matching_alg.get_keypoint_coordinates(k_t);
+            shift_xs.append(k_q_coord[0] - k_t_coord[0])
+            shift_ys.append(k_q_coord[1] - k_t_coord[1])
 
         shift_x1 = sum(shift_xs) / len(shift_xs)
         shift_y1 = sum(shift_ys) / len(shift_ys)
@@ -152,19 +192,32 @@ class fn_benchmarker:
         logging.info(f"SCORE IS: {score}")
         return score, (shift_x, shift_y)
 
+    def calculate_histogram(image):
+        """
+        Calculate a histogram of a single-channel (greyscale) image using 256
+        bins, one for each possible value of a pixel. This histogram provides
+        information about the distribution of pixel densities in the image.
+        """
+        return cv2.calcHist([image], [0], None, [256], [0, 256])
+
     def perform_matching(self):
         # Extract features
-        feature_data = extract_features(self.image_list_file, self.model_file)
+        logging.info("Beginning feature extraction")
+        feature_data = self.matching_alg.get_features(self.image_list_file)
+        logging.info("Feature extraction is complete")
         total_num = len(list(feature_data.keys()))
         positive_num = 0
         negative_num = 0
         best_fit = None
         best_score = 0
         best_shift = None
+
+        # For every image, compute the number of other images it matches with.
         for query_image_path, query_data in feature_data.items():
+            # Load the image in grayscale.
             query_img = cv2.imread(query_image_path, 0)
             query_img = cv2.resize(query_img, (config.IM_HEIGHT, config.IM_WIDTH))
-            query_hist = cv2.calcHist([query_img], [0], None, [256], [0, 256])
+            query_hist = calculate_histogram(query_img)
             query_des = query_data["descriptors"]
             query_kp = query_data["keypoints"]
 
@@ -174,7 +227,7 @@ class fn_benchmarker:
 
                 target_img = cv2.imread(target_image_path, 0)
                 target_img = cv2.resize(target_img, (config.IM_HEIGHT, config.IM_WIDTH))
-                target_hist = cv2.calcHist([target_img], [0], None, [256], [0, 256])
+                target_hist = calculate_histogram(target_img)
                 target_des = target_data["descriptors"]
                 target_kp = target_data["keypoints"]
 
@@ -204,7 +257,11 @@ class fn_benchmarker:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     image_list_file = "fp_image_list.txt"
-    model_file = "/home/scott/graffiti/dnn_models/d2net/models/d2_tf.pth"
+    model_file = "models/d2_tf.pth"
     logging.info("Performing false positive benchamark")
-    benchmarker = fn_benchmarker(image_list_file, model_file)
+
+    # d2net_alg = D2Net(model_file)
+    surf_alg = SURF()
+
+    benchmarker = fp_benchmarker(image_list_file, surf_alg)
     benchmarker.perform_matching()

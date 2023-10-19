@@ -16,21 +16,23 @@ import scipy.misc
 
 from PIL import Image
 
+import logging
+
 sys.path.append(os.path.join("dnn_models", "d2net"))
 from lib.model_test import D2Net
 from lib.utils import preprocess_image
 from lib.pyramid import process_multiscale
 
-
 def resize_image(image, target_size):
+    logging.info("Starting image resize")
     # Convert the NumPy array to a PIL Image object
     pil_image = Image.fromarray((image * 255).astype(np.uint8))
     # Resize the image
-    resized_pil_image = pil_image.resize(target_size, Image.ANTIALIAS)
+    resized_pil_image = pil_image.resize(target_size, Image.LANCZOS)
     # Convert the PIL Image object back to a NumPy array
     resized_image = np.array(resized_pil_image).astype("float") / 255
+    logging.info("Image resize done")
     return resized_image
-
 
 def extract_features(
     image_list_file,

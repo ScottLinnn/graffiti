@@ -1,2 +1,10 @@
 *.jpg
 *.mp4
+*.bin
+*.swp
+*.h5
+.DS_Store
+*~
+!test_images/different_things/*.jpg
+__pycache__
+models

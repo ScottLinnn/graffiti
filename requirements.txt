@@ -1,0 +1,6 @@
+scipy==1.11.3
+opencv-python==4.8.1.78
+imageio==2.31.5
+torch==2.1.0
+tqdm==4.66.1
+matplotlib==3.8.0

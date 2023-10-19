@@ -204,7 +204,7 @@ class fn_benchmarker:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     image_list_file = "fn_image_list.txt"
-    model_file = "/home/scott/graffiti/dnn_models/d2net/models/d2_tf.pth"
+    model_file = "models/d2_tf.pth"
     logging.info("Performing false positive benchamark")
     benchmarker = fn_benchmarker(image_list_file, model_file)
     benchmarker.perform_matching()
