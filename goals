@@ -1,0 +1,48 @@
+Get benchmarks using GPU
+Collect images:
+  1. Similar background -- different object (look similar)
+  2. Different background -- same object
+Precision and recall numbers for the algorithms
+  - False positives -- if you have no positives, there can be no false positives
+
+  - precision - for all true examples, how many did the algo report as true
+  - recall - for all examples the algo reported as true, how many were actually true examples
+
+Latency on GPU -- how long it takes to run on the benchmark
+
+Demo: original backend (SIFT/SURF) -- using python client
+for final demo, have ability to switch backend -- devise way to show weakness of each extraction algo
+
+two types of CNNs:
+
+1. D2Net, for ex, gives keypoints and descs. But is also a CNN?
+
+Find more algos in category (1)
+
+2. VGG16: you just look at the output one layer before the classification. Does not give keypoints and descs
+
+Focus on (1)?
+
+Next steps:
+- collecting more images like Mihir said
+
+Collect images:
+  1. Similar background -- different object (look similar)
+  2. Different background -- same object
+
+- Shuning -- begin drafting slides
+- Aditya -- collecting images, fixing bugs
+
+both:
+- see if we can impl one or two more CNNs in category (1)
+    - lots of models in this category, should be straightforward?
+- most of git submodules in category (1)
+
+original demo:
+  - matching doesn't work well. will look strange?
+  - would be better to compare once we add new model?
+  - it will at least demonstrate we have working code <----
+
+Meeting on Saturday afternoon
+  - talk about slides
+  - send slides to Mihir on Monday

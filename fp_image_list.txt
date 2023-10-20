@@ -16,5 +16,6 @@
 # test_images/vip-lowlight/Img_006.png
 # test_images/vip-lowlight/Img_007.png
 # test_images/vip-lowlight/Img_008.png
-test_images/similar_pillar_corners
-test_images/similar_wood_texture
+# test_images/similar_pillar_corners
+# test_images/similar_wood_texture
+test_images/apartment_walls

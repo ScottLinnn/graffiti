@@ -1,103 +1,13 @@
 import argparse
 import cv2
 import numpy as np
-import config
 from scipy import stats
 import logging
-from extract_d2net import (
-    extract_features,
-)  # Assuming the above code is saved in feature_extractor.py
 from enum import Enum
 import os
 
-###############################################################################
-
-class FeatureMatchingAlgorithm:
-    def get_features(self, image_list_file: str):
-        pass
-
-    @staticmethod
-    def get_keypoint_coordinates(keypoint):
-        pass
-
-    @staticmethod
-    def get_kp_desc_pair(feature_data):
-        pass
-
-###############################################################################
-
-def get_image_list_from_file(image_list_file):
-    image_path_list = []
-    with open(image_list_file, 'r') as file:
-        for line in file:
-            line = line.strip()
-            if line.startswith('#'):
-                continue
-            if os.path.isdir(line):
-                # If the line is a directory, collect all image files within it
-                directory_path = line
-                image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
-                is_image_file = \
-                    lambda filename : filename.lower().endswith(image_extensions)
-                image_files = [
-                    os.path.join(directory_path, filename)
-                    for filename in os.listdir(directory_path)
-                    if is_image_file(filename)
-                ]
-                image_path_list.extend(image_files)
-            else:
-                # Otherwise, assume it's a direct image file path
-                image_path_list.append(line)
-    return image_path_list
-
-###############################################################################
-
-class SURF(FeatureMatchingAlgorithm):
-    def get_features(self, image_list_file: str):
-        file_to_kp_desc_map = {}
-        surf = cv2.xfeatures2d.SURF_create()
-
-        image_path_list = get_image_list_from_file(image_list_file)
-
-        for image_file in image_path_list:
-            img = cv2.imread(image_file, 0)
-            img = cv2.resize(img, (config.IM_HEIGHT, config.IM_WIDTH))
-            file_to_kp_desc_map[image_file] = surf.detectAndCompute(img, None)
-
-        return file_to_kp_desc_map
-
-    @staticmethod
-    def get_keypoint_coordinates(keypoint):
-        return keypoint.pt
-
-    @staticmethod
-    def get_kp_desc_pair(feature_data):
-        return feature_data
-
-###############################################################################
-
-class D2Net(FeatureMatchingAlgorithm):
-    def __init__(self, model_file):
-        self.model_file = model_file
-
-    def get_features(self, image_list_file: str):
-        image_path_list = get_image_list_from_file(image_list_file)
-        temp_file_name = "temp_file_list"
-        with open(temp_file_name, 'w') as file:
-            for image_path in image_path_list:
-                file.write(image_path + '\n')
-
-        features = extract_features(temp_file_name, self.model_file)
-        os.remove(temp_file_name)
-        return features
-
-    @staticmethod
-    def get_keypoint_coordinates(keypoint):
-        return keypoint
-
-    @staticmethod
-    def get_kp_desc_pair(feature_data):
-        return (feature_data["descriptors"], feature_data["keypoints"])
+import config
+import matching_algos
 
 ###############################################################################
 
@@ -290,9 +200,11 @@ class benchmarker:
             query_img = cv2.imread(query_image_path, 0)
             query_img = cv2.resize(query_img,
                                    (config.IM_HEIGHT, config.IM_WIDTH))
-            query_hist = self.calculate_histogram(query_img)
-            (query_kp, query_des) = \
-                self.matching_alg.get_kp_desc_pair(query_data)
+
+            if self.matching_alg.provides_keypoints():
+                query_hist = self.calculate_histogram(query_img)
+                (query_kp, query_des) = \
+                    self.matching_alg.get_kp_desc_pair(query_data)
 
             for target_image_path, target_data in feature_data.items():
                 if query_image_path == target_image_path:
@@ -302,18 +214,24 @@ class benchmarker:
 
                 target_img = cv2.imread(target_image_path, 0)
                 target_img = cv2.resize(target_img, (config.IM_HEIGHT, config.IM_WIDTH))
-                target_hist = self.calculate_histogram(target_img)
-                (target_kp, target_des) = \
-                    self.matching_alg.get_kp_desc_pair(target_data)
 
-                # Convert descriptors to type float32, which is required by FLANN
-                query_des = query_des.astype(np.float32)
-                target_des = target_des.astype(np.float32)
+                if self.matching_alg.provides_keypoints():
+                    target_hist = self.calculate_histogram(target_img)
+                    (target_kp, target_des) = \
+                        self.matching_alg.get_kp_desc_pair(target_data)
 
-                score, shift = self.compute_match_score(
-                    (query_kp, query_des, query_hist, query_img),
-                    (target_kp, target_des, target_hist, target_img),
-                )
+                    # Convert descriptors to type float32, which is required by FLANN
+                    query_des = query_des.astype(np.float32)
+                    target_des = target_des.astype(np.float32)
+
+                    score, shift = self.compute_match_score(
+                        (query_kp, query_des, query_hist, query_img),
+                        (target_kp, target_des, target_hist, target_img),
+                    )
+                else:
+                    euclidean_dist = \
+                        scipy.partial.distance.euclidean(query_data, target_data)
+                    score = euclidean_dist
 
                 if score is None:
                     negative_num += 1
@@ -344,9 +262,9 @@ def main():
         "--type", choices=["false_pos", "false_neg"], required=True,
         help="Specify the type of benchmark to run")
 
-    matching_algos = ["surf", "d2net"]
+    matching_algos_list = ["surf", "d2net", "orb", "vgg16"]
     parser.add_argument(
-        "--matching_algo", choices=matching_algos, required=True,
+        "--matching_algo", choices=matching_algos_list, required=True,
         help="Specify the matching algorithm to use for the benchmark")
     args = parser.parse_args()
 
@@ -360,10 +278,14 @@ def main():
         logging.info("Performing false negative benchamark")
 
     if args.matching_algo == "surf":
-        matching_algo = SURF()
+        matching_algo = matching_algos.SURF()
     elif args.matching_algo == "d2net":
         model_file = "models/d2_tf.pth"
-        matching_algo = D2Net(model_file)
+        matching_algo = matching_algos.D2Net(model_file)
+    elif args.matching_algo == "orb":
+        matching_algo = matching_algos.ORB()
+    elif args.matching_algo == "vgg16":
+        matching_algo = matching_algos.VGG16()
 
     b = benchmarker(benchmark_type, image_list_file, matching_algo)
     b.perform_matching()
