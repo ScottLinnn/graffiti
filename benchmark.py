@@ -5,6 +5,8 @@ from scipy import stats
 import logging
 from enum import Enum
 import os
+import torch
+import tensorflow as tf
 
 import config
 import matching_algos
@@ -181,6 +183,44 @@ class benchmarker:
 
 ###############################################################################
 
+    @staticmethod
+    def images_are_of_same_object(filepath1, filepath2):
+        different_things_dirpath = \
+            os.path.abspath('test_images/different_things')
+        same_things_dirpath = \
+            os.path.abspath('test_images/same_things')
+
+        filepaths = [filepath1, filepath2]
+
+        file_in_dir = \
+            lambda (filepath, dirpath) :
+                os.path.commonpath(filepath, dirpath) == dirpath
+
+        if not file_in_dir(filepath1, different_things_dirpath) and
+           not file_in_dir(filepath1, same_things_dirpath):
+               raise Exception("Image not placed correctly: " + filepath1)
+
+        if not file_in_dir(filepath2, different_things_dirpath) and
+           not file_in_dir(filepath2, same_things_dirpath):
+               raise Exception("Image not placed correctly: " + filepath2)
+
+        images_from_same_dir = \
+            os.path.dirname(filepath1) == os.path.dirname(filepath2)
+
+        images_in_same_things_dir = [
+            file_in_dir(filepath, same_things_dirpath)
+            for filepath in filepaths
+        ]
+
+        if [True, True] == images_in_same_things_dir and
+            images_from_same_dir(filepath1, filepath2):
+            return True
+
+        return False
+
+
+###############################################################################
+
     def perform_matching(self):
         # Extract features
         logging.info("Beginning feature extraction")
@@ -188,8 +228,8 @@ class benchmarker:
         logging.info("Feature extraction is complete")
         logging.info(f"Feature data is of type {type(feature_data)}")
         total_num = len(list(feature_data.keys()))
-        positive_num = 0
-        negative_num = 0
+        false_positives = 0
+        false_negatives = 0
         best_fit = None
         best_score = 0
         best_shift = None
@@ -233,10 +273,14 @@ class benchmarker:
                         scipy.partial.distance.euclidean(query_data, target_data)
                     score = euclidean_dist
 
-                if score is None:
-                    negative_num += 1
-                else:
-                    positive_num += 1
+
+                if score is None and
+                    images_are_of_same_object(query_image_path, target_image_path):
+                    false_negatives += 1
+
+                if score is not None and
+                    not images_are_of_same_object(query_image_path, target_image_path):
+                    false_positives += 1
 
                 if score is not None and score > best_score:
                     best_score = score
@@ -245,15 +289,22 @@ class benchmarker:
 
             logging.info(f"BEST FIT IS: {best_fit}")
 
-        if self.benchmark_type == BenchmarkType.FALSE_POS:
-            logging.info(f"False positive is: {positive_num/total_num/100}%")
-        elif self.benchmark_type == BenchmarkType.FALSE_NEG:
-            logging.info(f"False negative is: {(negative_num/total_num/100)}%")
+        logging.info(f"False positive is: {false_positives/total_num/100}%")
+        logging.info(f"False negative is: {false_negatives/total_num/100}%")
 
 ###############################################################################
 
 def main():
     logging.basicConfig(level=logging.INFO)
+
+    print(torch.cuda.is_available())
+    print(torch.cuda.device_count())
+    print(torch.cuda.current_device())
+    print(torch.cuda.device(0))
+    print(torch.cuda.get_device_name(0))
+
+    print(tf.sysconfig.get_build_info())
+    print(tf.config.list_physical_devices('GPU'))
 
     parser = \
         argparse.ArgumentParser(
