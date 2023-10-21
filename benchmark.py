@@ -7,6 +7,7 @@ from enum import Enum
 import os
 import torch
 import tensorflow as tf
+import math
 
 import config
 import feature_extraction_algos
@@ -222,13 +223,14 @@ class benchmarker:
         feature_data = self.feature_extraction_algo.get_features(self.image_list_file)
         logging.info("Feature extraction is complete")
         logging.info(f"Feature data is of type {type(feature_data)}")
-        total_num = len(list(feature_data.keys()))
-        total_num *= (total_num - 1)
+        num_images = len(list(feature_data.keys()))
+        total_num = math.comb(num_images, 2)
         false_positives = 0
         false_negatives = 0
         best_fit = None
         best_score = 0
         best_shift = None
+        num_match_pairs = 0
 
         # For every image, compute the number of other images it matches with.
         for query_image_path, query_data in feature_data.items():
@@ -245,6 +247,9 @@ class benchmarker:
             for target_image_path, target_data in feature_data.items():
                 if query_image_path == target_image_path:
                     continue  # Skip matching with itself
+                if query_image_path > target_image_path:
+                    continue
+                num_match_pairs += 1
                 logging.debug(
                     f"Now comparing {query_image_path} with {target_image_path}")
 
@@ -290,6 +295,7 @@ class benchmarker:
         logging.info(f"{false_positives=}, {false_negatives=}, {total_num=}")
         logging.info(f"False positive rate is: {(false_positives/total_num)*100}%")
         logging.info(f"False negative rate is: {(false_negatives/total_num)*100}%")
+        logging.info(f"Found {num_match_pairs} match pairs")
 
 ###############################################################################
 
