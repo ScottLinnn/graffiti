@@ -103,5 +103,5 @@ EXPOSE 8000
 EXPOSE 9099
 
 # Run the application.
-CMD python benchmark.py --type=false_pos --matching_algo=d2net
+CMD python benchmark.py --feature_extraction_algo=orb
 # CMD python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"

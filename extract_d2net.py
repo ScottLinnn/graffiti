@@ -24,14 +24,14 @@ from lib.utils import preprocess_image
 from lib.pyramid import process_multiscale
 
 def resize_image(image, target_size):
-    logging.info("Starting image resize")
+    logging.debug("Starting image resize")
     # Convert the NumPy array to a PIL Image object
     pil_image = Image.fromarray((image * 255).astype(np.uint8))
     # Resize the image
     resized_pil_image = pil_image.resize(target_size, Image.LANCZOS)
     # Convert the PIL Image object back to a NumPy array
     resized_image = np.array(resized_pil_image).astype("float") / 255
-    logging.info("Image resize done")
+    logging.debug("Image resize done")
     return resized_image
 
 def extract_features(

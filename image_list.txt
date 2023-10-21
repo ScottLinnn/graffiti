@@ -1,0 +1,27 @@
+# test_images/different_things/bedroom.jpg
+# test_images/different_things/just_a_wall.jpg
+# test_images/different_things/milk.jpg
+# test_images/different_things/bread_in_firdge.jpg
+# test_images/different_things/milan_cathedral.jpg
+# test_images/different_things/wirl-home-office-before.jpg
+# test_images/different_things/piazza.jpg
+# test_images/different_things/cup.jpg
+# test_images/different_things/mount_rushmore.jpg
+# test_images/different_things/florence.jpg
+# test_images/vip-lowlight/Img_001.png
+# test_images/vip-lowlight/Img_002.png
+# test_images/vip-lowlight/Img_003.png
+# test_images/vip-lowlight/Img_004.png
+# test_images/vip-lowlight/Img_005.png
+# test_images/vip-lowlight/Img_006.png
+# test_images/vip-lowlight/Img_007.png
+# test_images/vip-lowlight/Img_008.png
+test_images/different_things/similar_pillar_corners
+test_images/different_things/similar_wood_texture
+test_images/different_things/apartment_walls
+test_images/same_things/wall_images
+test_images/different_things/gates_photos
+test_images/same_things/newell_simon_board
+test_images/same_things/gates_table
+test_images/same_things/plants_1
+test_images/same_things/trash_can

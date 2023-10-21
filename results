@@ -1,0 +1,14 @@
+surf
+INFO:root:false_positives=81, false_negatives=37, total_num=3540
+INFO:root:False positive rate is: 2.288135593220339%
+INFO:root:False negative rate is: 1.0451977401129944%
+
+d2net
+INFO:root:false_positives=1136, false_negatives=14, total_num=3540
+INFO:root:False positive rate is: 32.090395480225986%
+INFO:root:False negative rate is: 0.39548022598870053%
+
+orb
+INFO:root:false_positives=0, false_negatives=50, total_num=3540
+INFO:root:False positive rate is: 0.0%
+INFO:root:False negative rate is: 1.4124293785310735%
