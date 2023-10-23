@@ -96,7 +96,14 @@ USER appuser
 WORKDIR /app
 
 # Copy the source code into the container.
-COPY . .
+COPY test_images test_images
+COPY dnn_models/d2net dnn_models/d2net
+COPY models models
+COPY extract_d2net.py extract_d2net.py
+COPY config.py config.py
+COPY feature_extraction_algos.py feature_extraction_algos.py
+COPY image_list.txt image_list.txt
+COPY benchmark.py benchmark.py
 
 # Expose the port that the application listens on.
 EXPOSE 8000

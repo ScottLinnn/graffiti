@@ -8,6 +8,8 @@ import os
 import torch
 import tensorflow as tf
 import math
+import sys
+import time
 
 import config
 import feature_extraction_algos
@@ -43,7 +45,7 @@ class benchmarker:
 ###############################################################################
 
     # Returns a match score between two images
-    def compute_match_score(self, query_data, train_data):
+    def compute_match_score(self, query_data, train_data, query_image, train_image):
         query_kp, query_des, query_hist, query_img = query_data
         train_kp, train_des, train_hist, train_img = train_data
 
@@ -52,6 +54,22 @@ class benchmarker:
         matches = \
             self.extract_good_matches(
                 self.flann.knnMatch(query_des, train_des, k=2))
+
+        # sorted_matches = sorted(matches, key = lambda x:x.distance)
+        # print(type(query_kp))
+        # print(type(train_kp))
+        # print(query_kp)
+        # print(train_kp)
+        # print([tuple(row[:2].tolist()) for row in query_kp])
+        # img = cv2.drawMatches(
+        #         query_image, [tuple(row[:2].tolist()) for row in query_kp], train_image, [row[:2].tolist() for row in train_kp], sorted_matches[:50],
+        #     None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        # img = cv2.drawMatches(
+        #         query_image, query_kp, train_image, train_kp, sorted_matches[:50],
+        #     None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        # cv2.imshow("Matches", img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
         # Filter out high intensity pixel values
         train_hist[245:] = train_hist[244]
@@ -227,6 +245,7 @@ class benchmarker:
         total_num = math.comb(num_images, 2)
         false_positives = 0
         false_negatives = 0
+        true_positives = 0
         best_fit = None
         best_score = 0
         best_shift = None
@@ -268,6 +287,7 @@ class benchmarker:
                     score, shift = self.compute_match_score(
                         (query_kp, query_des, query_hist, query_img),
                         (target_kp, target_des, target_hist, target_img),
+                        query_img, target_img,
                     )
                 else:
                     euclidean_dist = \
@@ -285,16 +305,22 @@ class benchmarker:
                     logging.info(f"False negative: {query_image_path} {target_image_path}")
                     false_negatives += 1
 
-                if (score is not None and
-                    not self.images_are_of_same_object(query_image_path, target_image_path)):
-                    logging.info(f"False positive: {query_image_path} {target_image_path}")
-                    false_positives += 1
+                if (score is not None):
+                    if (self.images_are_of_same_object(query_image_path, target_image_path)):
+                        true_positives += 1
+                    else:
+                        logging.info(f"False positive: {query_image_path} {target_image_path}")
+                        false_positives += 1
 
             logging.debug(f"BEST FIT IS: {query_image_path} {best_fit}")
 
         logging.info(f"{false_positives=}, {false_negatives=}, {total_num=}")
         logging.info(f"False positive rate is: {(false_positives/total_num)*100}%")
         logging.info(f"False negative rate is: {(false_negatives/total_num)*100}%")
+        # Of all the instances the model predicted as positive, how many were actually correct?
+        logging.info(f"Precision: {(true_positives/(true_positives + false_positives))*100}")
+        # Of all the actual positive instances, how many did the model correctly predict as positive?
+        logging.info(f"Recall: {(true_positives/(true_positives + false_negatives))*100}")
         logging.info(f"Found {num_match_pairs} match pairs")
 
 ###############################################################################
@@ -334,7 +360,9 @@ def main():
         feature_extraction_algo = feature_extraction_algos.VGG16()
 
     b = benchmarker(image_list_file, feature_extraction_algo)
+    start_time = time.time()
     b.perform_matching()
+    logging.info(f"Benchmark took {time.time() - start_time} seconds")
 
 if __name__ == "__main__":
     main()

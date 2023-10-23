@@ -18,7 +18,7 @@ fi
 if [ ! -d test_images/same_things ]; then
   mkdir test_images/same_things
 fi
-if [ ! -d test_images/mount_rushmore ]; then
+if [ ! -d test_images/same_things/mount_rushmore ]; then
   wget https://www.cs.ubc.ca/research/kmyi_data/imw2020/TestData/mount_rushmore.tar.gz -P test_images/
   tar -xvf test_images/mount_rushmore.tar.gz -C test_images/same_things
   rm test_images/mount_rushmore.tar.gz

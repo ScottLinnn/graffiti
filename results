@@ -1,14 +1,26 @@
 surf
-INFO:root:false_positives=81, false_negatives=37, total_num=3540
-INFO:root:False positive rate is: 2.288135593220339%
-INFO:root:False negative rate is: 1.0451977401129944%
+INFO:root:false_positives=13, false_negatives=22, total_num=1770
+INFO:root:False positive rate is: 0.7344632768361582%
+INFO:root:False negative rate is: 1.2429378531073447%
+INFO:root:Precision: 38.095238095238095
+INFO:root:Recall: 26.666666666666668
+INFO:root:Found 1770 match pairs
+INFO:root:Benchmark took 261.52611660957336 seconds
 
 d2net
-INFO:root:false_positives=1136, false_negatives=14, total_num=3540
-INFO:root:False positive rate is: 32.090395480225986%
-INFO:root:False negative rate is: 0.39548022598870053%
+INFO:root:false_positives=539, false_negatives=9, total_num=1770
+INFO:root:False positive rate is: 30.45197740112994%
+INFO:root:False negative rate is: 0.5084745762711864%
+INFO:root:Precision: 3.75
+INFO:root:Recall: 70.0
+INFO:root:Found 1770 match pairs
+INFO:root:Benchmark took 286.00558161735535 seconds
 
 orb
-INFO:root:false_positives=0, false_negatives=50, total_num=3540
+INFO:root:false_positives=0, false_negatives=28, total_num=1770
 INFO:root:False positive rate is: 0.0%
-INFO:root:False negative rate is: 1.4124293785310735%
+INFO:root:False negative rate is: 1.5819209039548021%
+INFO:root:Precision: 100.0
+INFO:root:Recall: 6.666666666666667
+INFO:root:Found 1770 match pairs
+INFO:root:Benchmark took 235.2225480079651 seconds

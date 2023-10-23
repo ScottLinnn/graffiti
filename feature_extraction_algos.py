@@ -102,7 +102,7 @@ class D2Net(FeatureExtractionAlgorithm):
 
     @staticmethod
     def get_kp_desc_pair(feature_data):
-        return (feature_data["descriptors"], feature_data["keypoints"])
+        return (feature_data["keypoints"], feature_data["descriptors"])
 
     @staticmethod
     def provides_keypoints():
