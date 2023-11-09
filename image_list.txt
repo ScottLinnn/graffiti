@@ -7,5 +7,12 @@ test_images/same_things/gates_table
 test_images/same_things/plants_1
 test_images/same_things/trash_can
 test_images/same_things/wall_images
-# test_images/different_things/similar_pillar_corners/IMG_0689.JPG
-# test_images/different_things/similar_wood_texture/IMG_0699.JPG
+# test_images/different_things/gates_photos/IMG_0722.JPG
+# test_images/different_things/gates_photos/IMG_0723.JPG
+# test_images/same_things/mount_rushmore/dense/images/12526636_3285271768.jpg
+# test_images/same_things/mount_rushmore/dense/images/12115787_13942944734.jpg
+# test_images/same_things/newell_simon_board/IMG_0734.JPG
+# test_images/same_things/newell_simon_board/IMG_0736.JPG
+# test_images/same_things/wall_images
+# test_images/different_things/apartment_walls/IMG_0705.JPG
+# test_images/different_things/gates_photos/IMG_0720.JPG

@@ -6,6 +6,10 @@ import imageio
 
 import torch
 
+import config
+
+import cv2
+
 from tqdm import tqdm
 
 import os
@@ -24,14 +28,12 @@ from lib.utils import preprocess_image
 from lib.pyramid import process_multiscale
 
 def resize_image(image, target_size):
-    logging.debug("Starting image resize")
     # Convert the NumPy array to a PIL Image object
     pil_image = Image.fromarray((image * 255).astype(np.uint8))
     # Resize the image
     resized_pil_image = pil_image.resize(target_size, Image.LANCZOS)
     # Convert the PIL Image object back to a NumPy array
     resized_image = np.array(resized_pil_image).astype("float") / 255
-    logging.debug("Image resize done")
     return resized_image
 
 def extract_features(
@@ -60,29 +62,32 @@ def extract_features(
 
         image = imageio.imread(path)
         if len(image.shape) == 2:
+            logging.info("bw image!!!")
             image = image[:, :, np.newaxis]
             image = np.repeat(image, 3, -1)
 
         # TODO: switch to PIL.Image due to deprecation of scipy.misc.imresize.
 
         # Get the resizing factor for max_edge constraint
-        resized_image = image
-        if max(resized_image.shape) > max_edge:
-            factor_max_edge = max_edge / max(resized_image.shape)
-            new_size_max_edge = (
-                int(resized_image.shape[1] * factor_max_edge),
-                int(resized_image.shape[0] * factor_max_edge),
-            )
-            resized_image = resize_image(resized_image, new_size_max_edge)
+        # resized_image = image
+        # if max(resized_image.shape) > max_edge:
+        #     factor_max_edge = max_edge / max(resized_image.shape)
+        #     new_size_max_edge = (
+        #         int(resized_image.shape[1] * factor_max_edge),
+        #         int(resized_image.shape[0] * factor_max_edge),
+        #     )
+        #     resized_image = resize_image(resized_image, new_size_max_edge)
 
-        # Get the resizing factor for max_sum_edges constraint
-        if sum(resized_image.shape[:2]) > max_sum_edges:
-            factor_max_sum_edges = max_sum_edges / sum(resized_image.shape[:2])
-            new_size_max_sum_edges = (
-                int(resized_image.shape[1] * factor_max_sum_edges),
-                int(resized_image.shape[0] * factor_max_sum_edges),
-            )
-            resized_image = resize_image(resized_image, new_size_max_sum_edges)
+        # # Get the resizing factor for max_sum_edges constraint
+        # if sum(resized_image.shape[:2]) > max_sum_edges:
+        #     factor_max_sum_edges = max_sum_edges / sum(resized_image.shape[:2])
+        #     new_size_max_sum_edges = (
+        #         int(resized_image.shape[1] * factor_max_sum_edges),
+        #         int(resized_image.shape[0] * factor_max_sum_edges),
+        #     )
+        #     resized_image = resize_image(resized_image, new_size_max_sum_edges)
+        # resized_image = resize_image(resized_image, (config.IM_WIDTH, config.IM_HEIGHT))
+        resized_image = cv2.resize(image, (config.IM_WIDTH, config.IM_HEIGHT))
 
         # resized_image = image
         # if max(resized_image.shape) > max_edge:
@@ -93,6 +98,7 @@ def extract_features(
         #     resized_image = scipy.misc.imresize(
         #         resized_image, max_sum_edges / sum(resized_image.shape[:2])
         #     ).astype("float")
+        print(f"Resized image: {resized_image.shape[0]=}, {resized_image.shape[1]=}")
 
         fact_i = image.shape[0] / resized_image.shape[0]
         fact_j = image.shape[1] / resized_image.shape[1]
@@ -118,8 +124,8 @@ def extract_features(
                 )
 
         # Input image coordinates
-        keypoints[:, 0] *= fact_i
-        keypoints[:, 1] *= fact_j
+        # keypoints[:, 0] *= fact_i
+        # keypoints[:, 1] *= fact_j
         # i, j -> u, v
         keypoints = keypoints[:, [1, 0, 2]]
 

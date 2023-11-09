@@ -32,6 +32,7 @@ def get_image_list_from_file(image_list_file):
             line = line.strip()
             if line.startswith('#'):
                 continue
+            assert os.path.exists(line), f"{line} not found"
             if os.path.isdir(line):
                 # If the line is a directory, collect all image files within it
                 directory_path = line
@@ -61,7 +62,7 @@ class SURF(FeatureExtractionAlgorithm):
 
         for image_file in image_path_list:
             img = cv2.imread(image_file, 0)
-            img = cv2.resize(img, (config.IM_HEIGHT, config.IM_WIDTH))
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
             file_to_kp_desc_map[image_file] = \
                 self.surf.detectAndCompute(img, None)
 
@@ -121,7 +122,7 @@ class ORB(FeatureExtractionAlgorithm):
 
         for image_file in image_path_list:
             img = cv2.imread(image_file, 0)
-            img = cv2.resize(img, (config.IM_HEIGHT, config.IM_WIDTH))
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
             file_to_kp_desc_map[image_file] = \
                 self.orb.detectAndCompute(img, None)
 
@@ -156,7 +157,7 @@ class VGG16(FeatureExtractionAlgorithm):
 
         for image_file in image_path_list:
             img = cv2.imread(image_file, 0)
-            img = cv2.resize(img, (config.IM_HEIGHT, config.IM_WIDTH))
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
             file_to_kp_desc_map[image_file] = self.vgg16.predict(img)
 
         return file_to_kp_desc_map
@@ -166,3 +167,127 @@ class VGG16(FeatureExtractionAlgorithm):
         return False
 
 ###############################################################################
+
+class BRIEF(FeatureExtractionAlgorithm):
+    def __init__(self):
+        self.brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+        self.star = cv2.xfeatures2d.StarDetector_create()
+
+    def get_features(self, image_list_file: str):
+        file_to_kp_desc_map = {}
+
+        image_path_list = get_image_list_from_file(image_list_file)
+
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
+            kp = self.star.detect(img, None)
+            file_to_kp_desc_map[image_file] = \
+                self.brief.compute(img, kp)
+
+        return file_to_kp_desc_map
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint.pt
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return feature_data
+
+    @staticmethod
+    def provides_keypoints():
+        return True
+
+###############################################################################
+
+class SIFT(FeatureExtractionAlgorithm):
+    def __init__(self):
+        self.sift = cv2.SIFT_create()
+    def get_features(self, image_list_file: str):
+        file_to_kp_desc_map = {}
+
+        image_path_list = get_image_list_from_file(image_list_file)
+
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
+            file_to_kp_desc_map[image_file] = \
+                self.sift.detectAndCompute(img, None)
+
+        return file_to_kp_desc_map
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint.pt
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return feature_data
+
+    @staticmethod
+    def provides_keypoints():
+        return True
+
+###############################################################################
+
+class KAZE(FeatureExtractionAlgorithm):
+    def __init__(self):
+        self.kaze = cv2.KAZE_create()
+    def get_features(self, image_list_file: str):
+        file_to_kp_desc_map = {}
+
+        image_path_list = get_image_list_from_file(image_list_file)
+
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
+            file_to_kp_desc_map[image_file] = \
+                self.kaze.detectAndCompute(img, None)
+
+        return file_to_kp_desc_map
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint.pt
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return feature_data
+
+    @staticmethod
+    def provides_keypoints():
+        return True
+
+###############################################################################
+
+class AKAZE(FeatureExtractionAlgorithm):
+    def __init__(self):
+        self.akaze = cv2.AKAZE_create()
+    def get_features(self, image_list_file: str):
+        file_to_kp_desc_map = {}
+
+        image_path_list = get_image_list_from_file(image_list_file)
+
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
+            file_to_kp_desc_map[image_file] = \
+                self.akaze.detectAndCompute(img, None)
+
+        return file_to_kp_desc_map
+
+    @staticmethod
+    def get_keypoint_coordinates(keypoint):
+        return keypoint.pt
+
+    @staticmethod
+    def get_kp_desc_pair(feature_data):
+        return feature_data
+
+    @staticmethod
+    def provides_keypoints():
+        return True
+
+###############################################################################
+

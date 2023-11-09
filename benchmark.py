@@ -14,6 +14,8 @@ import time
 import config
 import feature_extraction_algos
 
+print_matches = False
+
 ###############################################################################
 
 # Compute false positives for images of different things
@@ -22,6 +24,7 @@ class benchmarker:
         self.flann = cv2.FlannBasedMatcher(config.INDEX_PARAMS, config.SEARCH_PARAMS)
         self.image_list_file = image_list_file
         self.feature_extraction_algo = feature_extraction_algo
+        self.get_image_data()
 
     # Finds the median bin of a histogram
     def hist_median(self, hist):
@@ -32,6 +35,17 @@ class benchmarker:
             s += hist[i]
             if s > half_samples:
                 return i
+
+###############################################################################
+
+    def get_image_data(self):
+        self.image_data = dict()
+        image_path_list = \
+            feature_extraction_algos.get_image_list_from_file(self.image_list_file)
+        for image_file in image_path_list:
+            img = cv2.imread(image_file, 0)
+            img = cv2.resize(img, (config.IM_WIDTH, config.IM_HEIGHT))
+            self.image_data[image_file] = img
 
 ###############################################################################
 
@@ -51,25 +65,42 @@ class benchmarker:
 
         score = 0
 
+        if min(len(query_kp), len(train_kp), 2) < 2:
+            return None, None, { 'matchThresholdMet': False }
         matches = \
             self.extract_good_matches(
                 self.flann.knnMatch(query_des, train_des, k=2))
 
-        # sorted_matches = sorted(matches, key = lambda x:x.distance)
+        sorted_matches = sorted(matches, key = lambda x:x.distance)
         # print(type(query_kp))
         # print(type(train_kp))
         # print(query_kp)
         # print(train_kp)
         # print([tuple(row[:2].tolist()) for row in query_kp])
-        # img = cv2.drawMatches(
-        #         query_image, [tuple(row[:2].tolist()) for row in query_kp], train_image, [row[:2].tolist() for row in train_kp], sorted_matches[:50],
-        #     None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-        # img = cv2.drawMatches(
-        #         query_image, query_kp, train_image, train_kp, sorted_matches[:50],
-        #     None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+        if print_matches:
+            if isinstance(query_kp[0], cv2.KeyPoint):
+                img = cv2.drawMatches(
+                        query_image, query_kp, train_image, train_kp, sorted_matches[:50],
+                     None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            else:
+                q_k = [row[:2].tolist() for row in query_kp]
+                t_k = [row[:2].tolist() for row in train_kp]
+                img = cv2.drawMatches(
+                        query_image, [cv2.KeyPoint(x, y, 5) for (x,y) in q_k], train_image, [cv2.KeyPoint(x, y, 5) for (x,y) in t_k], sorted_matches[:50],
+                    None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            cv2.imshow("Matches", img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        # print([(x,y) for (x,y) in q_k])
+
+        # img = cv2.drawKeypoints(query_image, query_kp, 0, (0, 0, 255), flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
+        # img = cv2.drawKeypoints(query_image, [cv2.KeyPoint(x,y,5) for (x,y) in q_k], 0, (0, 0, 255), flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
         # cv2.imshow("Matches", img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
+        # cv2.imwrite('/app/tmp/orb_rushm_img1.jpg', img)
 
         # Filter out high intensity pixel values
         train_hist[245:] = train_hist[244]
@@ -114,15 +145,14 @@ class benchmarker:
             * 100
         )
 
+        def DCT(img):
+            imf = np.float32(img) / 255.0  # Float conversion/scale
+            dst = cv2.dct(imf)  # Calculate the dct
+            return dst
+
         # Find DCT correlation
-        imf = np.float32(query_img) / 255.0  # Float conversion/scale
-        dst = cv2.dct(imf)  # Calculate the dct
-        img1 = dst
-
-        imf = np.float32(train_img) / 255.0  # Float conversion/scale
-        dst = cv2.dct(imf)  # Calculate the dct
-        img2 = dst
-
+        img1 = DCT(query_img)
+        img2 = DCT(train_img)
         dct_diff = img1 - img2
         dct_correl = (
             cv2.compareHist(img1.flatten(), img2.flatten(), cv2.HISTCMP_CORREL) * 100
@@ -142,7 +172,7 @@ class benchmarker:
 
         # Reject match if number of detected matches is less than the threshold
         if len(matches) < threshold:
-            return None, None
+            return None, None, { 'matchThresholdMet': False }
         else:
             score += len(matches)
 
@@ -177,10 +207,11 @@ class benchmarker:
         if hist_test_passes >= 2:
             score += hist_correlation + dct_correl + hist_mwn
         else:
-            return None, None
+            logging.debug(f"Did not meet hist test, {hist_test_passes}/3")
+            return None, None, { 'histTestPassed': False, 'matchThresholdMet': True }
 
         logging.debug(f"SCORE IS: {score}")
-        return score, (shift_x, shift_y)
+        return score, (shift_x, shift_y), dict()
 
 ###############################################################################
 
@@ -241,22 +272,33 @@ class benchmarker:
         feature_data = self.feature_extraction_algo.get_features(self.image_list_file)
         logging.info("Feature extraction is complete")
         logging.info(f"Feature data is of type {type(feature_data)}")
+
+        # histogram_data = dict()
+        # for query_image_path, _ in feature_data.items():
+        #     histogram_data[query_image_path] = self.calculate_histogram(query_img)
+
         num_images = len(list(feature_data.keys()))
         total_num = math.comb(num_images, 2)
+        logging.info(f"{num_images=} images were specified for a total of "
+                     f"{total_num=} matches")
+
         false_positives = 0
         false_negatives = 0
+        # The number of matches reported by the algorithm that were correct.
         true_positives = 0
+        # The number of matches that are actually true matches.
+        ground_truth_positives = 0
         best_fit = None
         best_score = 0
         best_shift = None
         num_match_pairs = 0
 
+        false_neg_match_threshold_unmet = 0
+        false_neg_hist_test_failed = 0
+
         # For every image, compute the number of other images it matches with.
         for query_image_path, query_data in feature_data.items():
-            # Load the image in grayscale.
-            query_img = cv2.imread(query_image_path, 0)
-            query_img = cv2.resize(query_img,
-                                   (config.IM_HEIGHT, config.IM_WIDTH))
+            query_img = self.image_data[query_image_path]
 
             if self.feature_extraction_algo.provides_keypoints():
                 query_hist = self.calculate_histogram(query_img)
@@ -272,23 +314,25 @@ class benchmarker:
                 logging.debug(
                     f"Now comparing {query_image_path} with {target_image_path}")
 
-                target_img = cv2.imread(target_image_path, 0)
-                target_img = cv2.resize(target_img, (config.IM_HEIGHT, config.IM_WIDTH))
+                target_img = self.image_data[target_image_path]
 
                 if self.feature_extraction_algo.provides_keypoints():
                     target_hist = self.calculate_histogram(target_img)
                     (target_kp, target_des) = \
                         self.feature_extraction_algo.get_kp_desc_pair(target_data)
 
-                    # Convert descriptors to type float32, which is required by FLANN
-                    query_des = query_des.astype(np.float32)
-                    target_des = target_des.astype(np.float32)
+                    if query_des is not None and target_des is not None:
+                        # Convert descriptors to type float32, which is required by FLANN
+                        query_des = query_des.astype(np.float32)
+                        target_des = target_des.astype(np.float32)
 
-                    score, shift = self.compute_match_score(
-                        (query_kp, query_des, query_hist, query_img),
-                        (target_kp, target_des, target_hist, target_img),
-                        query_img, target_img,
-                    )
+                        score, shift, reason = self.compute_match_score(
+                            (query_kp, query_des, query_hist, query_img),
+                            (target_kp, target_des, target_hist, target_img),
+                            query_img, target_img,
+                        )
+                    else:
+                        score = None
                 else:
                     euclidean_dist = \
                         scipy.partial.distance.euclidean(query_data, target_data)
@@ -300,17 +344,20 @@ class benchmarker:
                     best_shift = shift
                     best_fit = target_image_path
 
-                if (score is None and
-                    self.images_are_of_same_object(query_image_path, target_image_path)):
-                    logging.info(f"False negative: {query_image_path} {target_image_path}")
-                    false_negatives += 1
-
-                if (score is not None):
-                    if (self.images_are_of_same_object(query_image_path, target_image_path)):
-                        true_positives += 1
+                if self.images_are_of_same_object(query_image_path, target_image_path):
+                    ground_truth_positives += 1
+                    if score is None:
+                        logging.info(f"False negative: {query_image_path} {target_image_path}")
+                        false_negatives += 1
+                        if not reason['matchThresholdMet']:
+                            false_neg_match_threshold_unmet += 1
+                        elif not reason['histTestPassed']:
+                            false_neg_hist_test_failed += 1
                     else:
-                        logging.info(f"False positive: {query_image_path} {target_image_path}")
-                        false_positives += 1
+                        true_positives += 1
+                elif score is not None:
+                    logging.info(f"False positive: {query_image_path} {target_image_path}")
+                    false_positives += 1
 
             logging.debug(f"BEST FIT IS: {query_image_path} {best_fit}")
 
@@ -322,6 +369,9 @@ class benchmarker:
         # Of all the actual positive instances, how many did the model correctly predict as positive?
         logging.info(f"Recall: {(true_positives/(true_positives + false_negatives))*100}")
         logging.info(f"Found {num_match_pairs} match pairs")
+        logging.info(f"{false_neg_match_threshold_unmet=}, {false_neg_hist_test_failed=}")
+        logging.info(f"{true_positives=}, {false_positives=}, {false_negatives=}")
+        logging.info(f"{ground_truth_positives=}, positive find rate: {(true_positives/ground_truth_positives)*100}%")
 
 ###############################################################################
 
@@ -341,7 +391,7 @@ def main():
         argparse.ArgumentParser(
             description="Benchmarking tool for feature matching algorithms")
 
-    feature_extraction_algos_list = ["surf", "d2net", "orb", "vgg16"]
+    feature_extraction_algos_list = ["surf", "d2net", "orb", "vgg16", "brief", "sift", "kaze", "akaze"]
     parser.add_argument(
         "--feature_extraction_algo", choices=feature_extraction_algos_list, required=True,
         help="Specify the matching algorithm to use for the benchmark")
@@ -358,6 +408,14 @@ def main():
         feature_extraction_algo = feature_extraction_algos.ORB()
     elif args.feature_extraction_algo == "vgg16":
         feature_extraction_algo = feature_extraction_algos.VGG16()
+    elif args.feature_extraction_algo == "brief":
+        feature_extraction_algo = feature_extraction_algos.BRIEF()
+    elif args.feature_extraction_algo == "sift":
+        feature_extraction_algo = feature_extraction_algos.SIFT()
+    elif args.feature_extraction_algo == "kaze":
+        feature_extraction_algo = feature_extraction_algos.KAZE()
+    elif args.feature_extraction_algo == "akaze":
+        feature_extraction_algo = feature_extraction_algos.AKAZE()
 
     b = benchmarker(image_list_file, feature_extraction_algo)
     start_time = time.time()
